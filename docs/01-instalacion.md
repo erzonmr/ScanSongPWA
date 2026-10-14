@@ -1,0 +1,83 @@
+# 1. Instalación y configuración
+
+Tiempo estimado: 10–15 minutos. Todo es gratis (plan Free de Supabase).
+
+## Requisitos
+
+- Una cuenta en [supabase.com](https://supabase.com) (puedes entrar con GitHub).
+- Para probar en tu PC: [Node.js 18+](https://nodejs.org) (solo para el servidor local) **o** la extensión *Live Server* de VS Code.
+- Un navegador moderno (Chrome, Edge, Safari, Firefox).
+
+## Paso 1 — Crear el proyecto de Supabase
+
+1. En el panel de Supabase: **New project**.
+2. Nombre: `cantoral`. Contraseña de la base de datos: guárdala (no la usa la app).
+3. Región: la más cercana (p. ej. *East US* o *South America (São Paulo)* para Colombia).
+4. Espera 1–2 minutos a que se cree.
+
+## Paso 2 — Crear tablas, seguridad, realtime y almacenamiento
+
+1. Menú izquierdo → **SQL Editor** → **New query**.
+2. Pega **todo** el contenido de `supabase/schema.sql` y pulsa **Run**.
+3. Debe decir *Success. No rows returned*.
+
+Esto crea:
+
+- La tabla `songs` con seguridad por fila (cada usuario solo ve lo suyo).
+- La publicación de **Realtime** para sincronizar entre dispositivos.
+- El bucket privado `scans` para las imágenes escaneadas, con sus políticas.
+
+> Puedes volver a ejecutar el script cuantas veces quieras; es idempotente.
+
+## Paso 3 — Configurar la autenticación
+
+**Authentication → Sign In / Providers → Email**:
+
+- Deja **Email** habilitado.
+- Como es un proyecto personal, puedes **desactivar "Confirm email"** para entrar sin tener que confirmar el correo. Si lo dejas activo, al crear la cuenta te llegará un correo de confirmación.
+
+**Authentication → URL Configuration**:
+
+- **Site URL**: la URL donde publiques la app (p. ej. `https://cantoral-tuusuario.vercel.app`). Mientras pruebas en local: `http://localhost:5173`.
+- **Redirect URLs**: agrega ambas (`http://localhost:5173` y la de producción). Necesario para los enlaces de confirmación y de "Olvidé mi contraseña".
+
+> Recomendado: después de crear tu cuenta, desactiva **"Allow new users to sign up"** (Authentication → Sign In / Providers) para que nadie más pueda registrarse en tu app.
+
+## Paso 4 — Conectar la app
+
+1. En Supabase: **Project Settings → API** (o el botón **Connect** arriba).
+2. Copia:
+   - **Project URL** → `https://xxxxxxxx.supabase.co`
+   - **anon public** key (o **Publishable key** `sb_publishable_...`).
+3. Abre `config.js` y pega los valores:
+
+```js
+window.APP_CONFIG = {
+  SUPABASE_URL: 'https://xxxxxxxx.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOi...',
+  OCR_LANG: 'spa',
+};
+```
+
+> ⚠️ Nunca uses la clave **service_role / secret** en `config.js`. La clave anon es pública por diseño; la protección real está en las políticas RLS.
+
+## Paso 5 — Ejecutar en tu PC (Windows)
+
+En PowerShell, dentro de la carpeta del proyecto:
+
+```powershell
+npm run dev
+```
+
+Abre <http://localhost:5173>, crea tu cuenta y prueba con una foto (botón **Elegir imagen**).
+
+Alternativas sin Node:
+
+- **VS Code + Live Server**: clic derecho en `index.html` → *Open with Live Server*.
+- **Python**: `python -m http.server 5173`.
+
+> La app **no funciona abriendo `index.html` con doble clic** (`file://`): los módulos JS, el service worker y la cámara requieren un servidor `http://localhost` o `https://`.
+
+## Paso 6 — Probar en el celular
+
+La cámara y la instalación como app requieren **HTTPS**. La forma más sencilla es publicarla (5 minutos, gratis): ver [02-despliegue.md](02-despliegue.md).
