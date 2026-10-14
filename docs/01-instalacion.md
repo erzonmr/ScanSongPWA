@@ -1,6 +1,19 @@
 # 1. Instalación y configuración
 
-Tiempo estimado: 10–15 minutos. Todo es gratis (plan Free de Supabase).
+Tiempo estimado: 10–15 minutos, más la clave de visión si partes de cero.
+
+## Estado actual
+
+| Pieza | Valor |
+|---|---|
+| Proyecto Supabase | `cantoral` (`ynhhagbciyfntxgiaqbt`), región East US (Virginia) |
+| App | https://cantoral-letras.netlify.app |
+| Site URL de Auth | `https://cantoral-letras.netlify.app` |
+| Redirect URLs | esa URL, `http://localhost:5173/**` y `http://127.0.0.1:5173/**` |
+| Confirmación de correo | desactivada |
+| Lectura con IA | función `ocr`; secreto `XAI_API_KEY` (no está en el repositorio) |
+
+`config.js` ya apunta a ese proyecto. La clave anónima es pública; la de Grok no va ahí.
 
 ## Requisitos
 
@@ -38,8 +51,10 @@ Esto crea:
 
 **Authentication → URL Configuration**:
 
-- **Site URL**: la URL donde publiques la app (p. ej. `https://cantoral-tuusuario.vercel.app`). Mientras pruebas en local: `http://localhost:5173`.
-- **Redirect URLs**: agrega ambas (`http://localhost:5173` y la de producción). Necesario para los enlaces de confirmación y de "Olvidé mi contraseña".
+- **Site URL**: `https://cantoral-letras.netlify.app`.
+- **Redirect URLs**: `https://cantoral-letras.netlify.app/**`, `http://localhost:5173/**` y `http://127.0.0.1:5173/**`. Hacen falta para "Olvidé mi contraseña".
+
+En este proyecto la confirmación de correo está desactivada y el registro sigue abierto hasta que crees tu cuenta.
 
 > Recomendado: después de crear tu cuenta, desactiva **"Allow new users to sign up"** (Authentication → Sign In / Providers) para que nadie más pueda registrarse en tu app.
 
@@ -59,9 +74,24 @@ window.APP_CONFIG = {
 };
 ```
 
-> ⚠️ Nunca uses la clave **service_role / secret** en `config.js`. La clave anon es pública por diseño; la protección real está en las políticas RLS.
+> ⚠️ Nunca uses la clave **service_role / secret** ni la clave de Grok en `config.js`. La clave anon es pública por diseño; la protección real está en las políticas RLS.
 
-## Paso 5 — Ejecutar en tu PC (Windows)
+## Paso 5 — Clave de visión
+
+La función `supabase/functions/ocr` llama a Grok 4.7. La clave se guarda como secreto del proyecto, no en git.
+
+En PowerShell, dentro de la carpeta del proyecto, sustituye `PEGA_LA_CLAVE` y ejecuta:
+
+```powershell
+Set-Content -Path "$env:TEMP\cantoral-xai.env" -Value "XAI_API_KEY=PEGA_LA_CLAVE"
+supabase secrets set --env-file "$env:TEMP\cantoral-xai.env" --project-ref ynhhagbciyfntxgiaqbt
+Remove-Item "$env:TEMP\cantoral-xai.env"
+supabase functions deploy ocr --project-ref ynhhagbciyfntxgiaqbt --use-api --yes
+```
+
+`supabase secrets list --project-ref ynhhagbciyfntxgiaqbt` debe mostrar el nombre `XAI_API_KEY`. En este proyecto el secreto ya está cargado.
+
+## Paso 6 — Ejecutar en tu PC (Windows)
 
 En PowerShell, dentro de la carpeta del proyecto:
 
@@ -78,6 +108,8 @@ Alternativas sin Node:
 
 > La app **no funciona abriendo `index.html` con doble clic** (`file://`): los módulos JS, el service worker y la cámara requieren un servidor `http://localhost` o `https://`.
 
-## Paso 6 — Probar en el celular
+## Paso 7 — Probar en el celular
 
-La cámara y la instalación como app requieren **HTTPS**. La forma más sencilla es publicarla (5 minutos, gratis): ver [02-despliegue.md](02-despliegue.md).
+La cámara y la instalación como app requieren **HTTPS**. El sitio ya publicado es https://cantoral-letras.netlify.app. Si vuelves a publicar, sigue [02-despliegue.md](02-despliegue.md).
+
+En local, **Leer con IA** también funciona: el navegador llama a la función de Supabase. El motor del dispositivo no necesita esa clave.

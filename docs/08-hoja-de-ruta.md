@@ -14,7 +14,8 @@ Ordenadas de mayor a menor valor práctico.
 
 - [ ] **Cancioneros compartidos** con el equipo de alabanza (tabla `songbooks` + `songbook_members` y políticas RLS por membresía).
 - [ ] **Lectura sin conexión** opcional (caché de solo lectura en IndexedDB) para lugares sin señal.
-- [ ] **OCR en la nube opcional** (Google Vision o un modelo de IA vía Supabase Edge Function) para fotos difíciles o letra manuscrita.
+- [x] **Lectura con IA** (Grok 4.7 vía Edge Function `ocr`). Es el motor por defecto; Tesseract queda en el dispositivo.
+- [ ] **Letra manuscrita**: la visión actual está afinada para cancionero impreso.
 - [ ] **Historial de versiones** de cada canción.
 - [ ] Exportar a **PDF** o a **diapositivas** para proyectar.
 

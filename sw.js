@@ -1,6 +1,6 @@
 // Service Worker — cachea la "cáscara" de la app para que abra rápido e
 // instalable. Los DATOS (canciones e imágenes) NO se cachean: viven en Supabase.
-const VERSION = 'cantoral-v1.0.0';
+const VERSION = 'cantoral-v1.1.0';
 const SHELL = [
   './',
   './index.html',

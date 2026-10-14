@@ -68,6 +68,39 @@ export const auth = {
   },
 };
 
+// ---------- Lectura con visión (Edge Function; la clave de IA no sale del servidor) ----------
+export const vision = {
+  /**
+   * @param {string} image data URL o base64 JPEG
+   * @param {{ lang?: string, layout?: string }} [opts]
+   * @returns {Promise<string>}
+   */
+  async transcribe(image, opts = {}) {
+    const session = await auth.session();
+    if (!session?.access_token) throw new Error('Inicia sesión para usar la lectura con IA.');
+    const base = window.APP_CONFIG.SUPABASE_URL.replace(/\/$/, '');
+    let res;
+    try {
+      res = await fetch(`${base}/functions/v1/ocr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: window.APP_CONFIG.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ image, lang: opts.lang || 'spa', layout: opts.layout || 'column' }),
+      });
+    } catch {
+      throw new Error('Sin conexión. La lectura con IA necesita internet.');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) throw new Error('La sesión caducó. Vuelve a entrar y reintenta.');
+    if (!res.ok) throw new Error(data.error || 'La IA no pudo leer la foto.');
+    if (!data.text || !String(data.text).trim()) throw new Error('La IA no devolvió texto.');
+    return String(data.text);
+  },
+};
+
 // ---------- Canciones ----------
 export const songs = {
   async list() {

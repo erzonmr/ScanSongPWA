@@ -5,7 +5,7 @@ import { stripChords, guessTitle } from './chords.js';
 import { mountScanner } from './scanner.js';
 import { toUploadBlob } from './imaging.js';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 const state = {
   session: null,
@@ -521,6 +521,7 @@ function renderSettings() {
   setTopbar('Ajustes', { back: true });
   const lang = prefs.get('ocrLang', null) || window.APP_CONFIG.OCR_LANG || 'spa';
   const layout = prefs.get('ocrLayout', 'column');
+  const engine = prefs.get('ocrEngine', 'vision');
   app.innerHTML = `
     <div class="stack">
       <div class="card stack">
@@ -531,7 +532,14 @@ function renderSettings() {
       </div>
 
       <div class="card stack">
-        <h3 style="margin-top:0">Escaneo (OCR)</h3>
+        <h3 style="margin-top:0">Escaneo</h3>
+        <label class="field">Motor de lectura
+          <select id="set-engine">
+            <option value="vision" ${engine === 'vision' ? 'selected' : ''}>IA de visión (recomendado)</option>
+            <option value="device" ${engine === 'device' ? 'selected' : ''}>En este dispositivo</option>
+          </select>
+        </label>
+        <p class="small muted" style="margin:0">La IA lee la foto a color y respeta las líneas de acordes. El motor del dispositivo no usa la nube, y conviene con buena luz.</p>
         <label class="field">Idioma del texto
           <select id="set-lang">
             <option value="spa" ${lang === 'spa' ? 'selected' : ''}>Español</option>
@@ -567,7 +575,8 @@ function renderSettings() {
       <p class="small muted">Cantoral v${APP_VERSION}</p>
     </div>`;
 
-  $('#set-lang').onchange = (e) => { prefs.set('ocrLang', e.target.value); toast('Idioma del OCR actualizado.'); };
+  $('#set-engine').onchange = (e) => { prefs.set('ocrEngine', e.target.value); toast(e.target.value === 'vision' ? 'Lectura con IA activada.' : 'Lectura en el dispositivo activada.'); };
+  $('#set-lang').onchange = (e) => { prefs.set('ocrLang', e.target.value); toast('Idioma del texto actualizado.'); };
   $('#set-layout').onchange = (e) => prefs.set('ocrLayout', e.target.value);
   $('#set-labels').onchange = (e) => prefs.set('keepLabels', e.target.checked);
   $('#btn-sync').onclick = async () => { await refreshSongs(); toast('Sincronizado.'); renderSettings(); };

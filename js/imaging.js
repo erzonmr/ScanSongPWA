@@ -35,8 +35,26 @@ export function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.85) {
   return new Promise((res) => canvas.toBlob(res, type, quality));
 }
 
+/**
+ * JPEG a color para la lectura con visión. Baja el tamaño si la foto pesa mucho:
+ * el detalle de los acordes se conserva mejor en color que en blanco y negro.
+ */
+export async function toVisionBlob(canvas) {
+  const attempts = [
+    [2000, 0.86],
+    [1600, 0.8],
+    [1200, 0.72],
+  ];
+  let blob = null;
+  for (const [maxSide, quality] of attempts) {
+    blob = await toUploadBlob(canvas, maxSide, quality);
+    if (blob && blob.size <= 1_400_000) return blob;
+  }
+  return blob;
+}
+
 /** Reduce para subir a la nube (ahorra espacio). */
-export async function toUploadBlob(canvas, maxSide = 1800) {
+export async function toUploadBlob(canvas, maxSide = 1800, quality = 0.8) {
   const scale = Math.min(1, maxSide / Math.max(canvas.width, canvas.height));
   const c = document.createElement('canvas');
   c.width = Math.round(canvas.width * scale);
@@ -45,7 +63,7 @@ export async function toUploadBlob(canvas, maxSide = 1800) {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, c.width, c.height);
   ctx.drawImage(canvas, 0, 0, c.width, c.height);
-  return canvasToBlob(c, 'image/jpeg', 0.8);
+  return canvasToBlob(c, 'image/jpeg', quality);
 }
 
 /**

@@ -2,7 +2,8 @@
 // Supabase → Project Settings → API (o "Connect"): Project URL y la clave pública
 // (anon / publishable). Esta clave es pública por diseño: la seguridad la dan
 // las políticas RLS definidas en supabase/schema.sql. NUNCA pongas aquí la
-// clave "service_role" / "secret".
+// clave "service_role" / "secret" ni la clave de Grok (esa es el secreto
+// XAI_API_KEY de la función supabase/functions/ocr).
 window.APP_CONFIG = {
   SUPABASE_URL: 'https://TU-PROYECTO.supabase.co',
   SUPABASE_ANON_KEY: 'TU_CLAVE_PUBLICA',

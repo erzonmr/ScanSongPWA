@@ -1,0 +1,13 @@
+# Sitio estático: no hay paso de compilación. Las rutas de la app van por hash.
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "no-cache"

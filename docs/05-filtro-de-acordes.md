@@ -11,17 +11,17 @@ G                C
 Señor mi Dios, al contemplar los cielos
 ```
 
-El OCR devuelve ambas líneas. Además, a veces **lee mal los acordes** (una `C` pequeña sale como `[o`, `Cc` o `(e`), así que no basta con buscar acordes válidos.
+La lectura devuelve ambas líneas. Grok recibe la instrucción de dejar los acordes en su propia línea. Tesseract, además, a veces **lee mal los acordes** (una `C` pequeña sale como `[o`, `Cc` o `(e`), así que no basta con buscar acordes válidos.
 
 ## Cómo funciona
 
-Para cada línea del texto OCR:
+Para cada línea del texto leído:
 
 1. **Acordes en línea** estilo ChordPro (`[G]Santo`) → se quitan los corchetes con acorde.
 2. **Etiquetas** (`Coro:`, `Estrofa 2`, `Intro:`, `Tono:`…) se detectan y se separan del resto.
 3. Se separan los **tokens** y se ignora el **ruido** (`|`, `-`, `x2`, `(x2)`, `N.C.`, `%`).
 4. La línea se considera **de acordes** (y se elimina) si:
-   - **Pista de espaciado**: hay huecos de 3+ espacios entre tokens y todos los tokens tienen ≤ 3 caracteres. El OCR conserva los espacios entre acordes (`preserve_interword_spaces`), y la letra nunca se ve así. Esto atrapa acordes mal leídos.
+   - **Pista de espaciado**: hay huecos de 3+ espacios entre tokens y todos los tokens tienen ≤ 3 caracteres. Tesseract conserva esos huecos (`preserve_interword_spaces`). La letra nunca se ve así, y esto atrapa acordes mal leídos.
    - **Proporción**: ≥ 75 % de los tokens son acordes válidos.
    - **Mayoría con ruido**: ≥ 50 % son acordes, hay al menos 2, y los demás tokens son muy cortos.
    - Un solo token corto entre corchetes/paréntesis (`[o`, `(e`).
@@ -42,11 +42,11 @@ Para cada línea del texto OCR:
 
 ## Reconstrucción de estrofas
 
-El OCR en modo "una columna" no devuelve líneas vacías. `ocr.js` usa la posición vertical de cada línea: si el espacio entre dos líneas es ≥ 1,5 veces el habitual (percentil 75), inserta una línea en blanco. Así se mantienen separadas las estrofas.
+Solo aplica al motor del dispositivo. Tesseract en modo "una columna" no devuelve líneas vacías. `ocr.js` usa la posición vertical de cada línea: si el espacio entre dos líneas es ≥ 1,5 veces el habitual (percentil 75), inserta una línea en blanco. La visión ya trae los saltos que vio en la página; si envuelve la respuesta en una cerca de markdown, `cleanTranscript` la quita (`tests/ocr.test.mjs`).
 
 ## Siempre hay revisión humana
 
-Ningún OCR es perfecto. Por eso la pantalla de revisión muestra la letra editable y conserva el **texto original** para poder volver a limpiarlo.
+Ninguna lectura es perfecta. Por eso la pantalla de revisión muestra la letra editable y conserva el **texto original** para poder volver a limpiarlo.
 
 ## Ajustar el filtro
 

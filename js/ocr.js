@@ -1,7 +1,8 @@
-// OCR en el navegador con Tesseract.js (no requiere servidor).
-// La primera vez descarga el modelo de idioma (~2-4 MB para español);
-// Tesseract lo guarda en caché del navegador para las siguientes veces.
+// Lectura de la página. Por defecto usa visión (Grok) en el servidor.
+// Tesseract.js queda como motor local: no requiere clave y funciona sin la función.
 import { loadScript } from './lib.js';
+import * as db from './db.js';
+import { toVisionBlob } from './imaging.js';
 
 const TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
 
@@ -27,16 +28,52 @@ async function getWorker(lang) {
   return workerPromise;
 }
 
+/** Quita cercas de markdown si el modelo envolvió la transcripción. */
+export function cleanTranscript(text) {
+  let t = String(text || '').replace(/^\uFEFF/, '').trim();
+  const fenced = t.match(/^```[a-z]*\s*\n([\s\S]*?)\n?```$/i);
+  if (fenced) t = fenced[1].trim();
+  return t;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error || new Error('No se pudo preparar la imagen.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
 /**
  * Reconoce el texto de un canvas.
  * @param {HTMLCanvasElement} canvas
  * @param {(pct:number, label:string) => void} onProgress
- * @param {{lang?:string, layout?:'column'|'auto'}} [opts]
- *   layout 'column' (PSM 6): un bloque de texto, conserva el orden línea a línea
- *   (ideal para acordes encima de la letra). 'auto' (PSM 3): detecta columnas.
- * @returns {Promise<{text:string, confidence:number}>}
+ * @param {{lang?:string, layout?:'column'|'auto', engine?:'vision'|'device'}} [opts]
+ *   engine 'vision': Grok lee la foto a color. 'device': Tesseract en el navegador.
+ *   layout 'column' conserva el orden línea a línea. 'auto' admite varias columnas.
+ * @returns {Promise<{text:string, confidence:number, engine:string}>}
  */
 export async function recognize(canvas, onProgress, opts = {}) {
+  if ((opts.engine || 'vision') === 'device') return recognizeLocal(canvas, onProgress, opts);
+  return recognizeVision(canvas, onProgress, opts);
+}
+
+async function recognizeVision(canvas, onProgress, opts) {
+  const lang = opts.lang || (window.APP_CONFIG && window.APP_CONFIG.OCR_LANG) || 'spa';
+  onProgress && onProgress(8, 'Preparando la foto…');
+  const blob = await toVisionBlob(canvas);
+  if (!blob) throw new Error('No se pudo preparar la imagen.');
+  const image = await blobToDataUrl(blob);
+  onProgress && onProgress(25, 'Leyendo con IA… puede tardar medio minuto');
+  const raw = await db.vision.transcribe(image, { lang, layout: opts.layout || 'column' });
+  const text = cleanTranscript(raw);
+  if (!text) throw new Error('La IA no devolvió texto.');
+  onProgress && onProgress(100, 'Listo');
+  return { text, confidence: 1, engine: 'vision' };
+}
+
+async function recognizeLocal(canvas, onProgress, opts) {
   const lang = opts.lang || (window.APP_CONFIG && window.APP_CONFIG.OCR_LANG) || 'spa';
   progressCb = (m) => {
     if (!onProgress) return;
@@ -58,7 +95,7 @@ export async function recognize(canvas, onProgress, opts = {}) {
   onProgress && onProgress(100, 'Listo');
   let text = data.text || '';
   try { text = restoreStanzaBreaks(text, data.lines || []); } catch { /* usar texto tal cual */ }
-  return { text, confidence: data.confidence || 0 };
+  return { text, confidence: data.confidence || 0, engine: 'device' };
 }
 
 /**

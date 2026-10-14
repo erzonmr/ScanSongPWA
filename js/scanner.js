@@ -139,10 +139,12 @@ export function mountScanner(root, opts) {
       <div class="range-row" id="brush-row" hidden style="margin-bottom:10px"><span class="small muted">Grosor</span><input type="range" id="brush-size" min="1" max="12" step="0.5" value="${brushPct}" /></div>
       <div class="mask-wrap"><canvas id="mask-canvas"></canvas></div>
       <div class="stack" style="margin-top:12px">
-        <label class="check"><input type="checkbox" id="opt-bw" ${prefs.get('ocrBinarize', false) ? 'checked' : ''}/> Alto contraste (blanco y negro) — útil con fotos oscuras o papel amarillento</label>
+        ${prefs.get('ocrEngine', 'vision') === 'device'
+          ? `<label class="check"><input type="checkbox" id="opt-bw" ${prefs.get('ocrBinarize', false) ? 'checked' : ''}/> Alto contraste (blanco y negro) — útil con fotos oscuras o papel amarillento</label>`
+          : `<p class="muted small" style="margin:0">La IA lee la foto a color. El alto contraste solo aplica al motor del dispositivo.</p>`}
         <div class="row end">
           <button class="btn" id="btn-back-step">Atrás</button>
-          <button class="btn primary" id="btn-ocr">${icons.text} Leer texto</button>
+          <button class="btn primary" id="btn-ocr">${icons.text} ${prefs.get('ocrEngine', 'vision') === 'device' ? 'Leer texto' : 'Leer con IA'}</button>
         </div>
       </div>`;
 
@@ -230,32 +232,40 @@ export function mountScanner(root, opts) {
     $('#btn-clear').onclick = () => { ops.length = 0; redraw(); };
     $('#btn-back-step').onclick = () => (original ? stepCrop(original) : stepPick());
     $('#btn-ocr').onclick = () => {
-      const binarize = $('#opt-bw').checked;
-      prefs.set('ocrBinarize', binarize);
+      const bw = $('#opt-bw');
+      const binarize = bw ? bw.checked : false;
+      if (bw) prefs.set('ocrBinarize', binarize);
       const finalCanvas = cloneCanvas(view); // imagen recortada + zonas borradas
       stepOcr(finalCanvas, binarize, () => stepMask(base, original));
     };
   }
 
   // ---------- Paso 4: OCR ----------
-  async function stepOcr(canvas, binarize, back) {
+  async function stepOcr(canvas, binarize, back, engine) {
+    const useDevice = (engine || prefs.get('ocrEngine', 'vision')) === 'device';
     root.innerHTML = `
       ${steps(4)}
       <h2>Leyendo la canción…</h2>
       <div class="card stack">
         <div class="progress"><div id="ocr-bar"></div></div>
         <p class="muted small" id="ocr-label">Preparando…</p>
-        <p class="muted small">La primera vez se descarga el motor de reconocimiento (unos segundos). Después es más rápido.</p>
+        <p class="muted small">${useDevice
+          ? 'La primera vez se descarga el motor del dispositivo (unos segundos). Después es más rápido.'
+          : 'La foto se envía a la IA de visión. Hace falta internet y puede tardar medio minuto.'}</p>
       </div>`;
     try {
-      const prepared = preprocessForOcr(canvas, { binarize });
-      const { text } = await recognize(prepared, (pct, label) => {
+      const source = useDevice ? preprocessForOcr(canvas, { binarize }) : canvas;
+      const { text } = await recognize(source, (pct, label) => {
         const bar = $('#ocr-bar'); const lab = $('#ocr-label');
         if (bar) bar.style.width = pct + '%';
         if (lab) lab.textContent = `${label} ${pct}%`;
-      }, { lang: prefs.get('ocrLang', null) || undefined, layout: prefs.get('ocrLayout', 'column') });
+      }, {
+        lang: prefs.get('ocrLang', null) || undefined,
+        layout: prefs.get('ocrLayout', 'column'),
+        engine: useDevice ? 'device' : 'vision',
+      });
       if (!text.trim()) {
-        toast('No se detectó texto. Prueba con mejor luz o alto contraste.', { error: true, ms: 4000 });
+        toast('No se detectó texto. Prueba con mejor luz o recorta más cerca.', { error: true, ms: 4000 });
         return back();
       }
       opts.onDone({ rawText: text, canvas });
@@ -265,10 +275,14 @@ export function mountScanner(root, opts) {
         <div class="card stack">
           <h2>No se pudo leer el texto</h2>
           <p class="muted">${escapeHtml(err.message || String(err))}</p>
-          <p class="muted small">El OCR necesita internet la primera vez para descargar el motor y el idioma.</p>
-          <div class="row end"><button class="btn" id="btn-retry-back">Atrás</button></div>
+          <div class="row end">
+            <button class="btn" id="btn-retry-back">Atrás</button>
+            ${useDevice ? '' : '<button class="btn" id="btn-device">Leer en el dispositivo</button>'}
+          </div>
         </div>`;
       $('#btn-retry-back').onclick = back;
+      const device = $('#btn-device');
+      if (device) device.onclick = () => stepOcr(canvas, binarize, back, 'device');
     }
   }
 

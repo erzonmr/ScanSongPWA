@@ -10,7 +10,7 @@ Script completo: `supabase/schema.sql`.
 | `user_id` | uuid | Dueño; por defecto `auth.uid()`. Se borra en cascada con el usuario |
 | `title` | text | 1–200 caracteres |
 | `lyrics` | text | Letra limpia (sin acordes) |
-| `raw_text` | text | Texto OCR original con acordes (para re-limpiar) |
+| `raw_text` | text | Transcripción original con acordes (para re-limpiar) |
 | `image_paths` | text[] | Rutas de las imágenes en el bucket `scans` |
 | `created_at` | timestamptz | Fecha de creación |
 | `updated_at` | timestamptz | Actualizado por trigger en cada `UPDATE` |
@@ -31,6 +31,10 @@ La tabla se agrega a la publicación `supabase_realtime`. El cliente se suscribe
 - Ruta: `<user_id>/<song_id>/<timestamp>-<aleatorio>.jpg`.
 - Políticas: cada usuario solo lee/escribe/borra dentro de la carpeta con su `user_id`.
 - La app muestra las imágenes con **URLs firmadas** que caducan en 1 hora.
+
+## Función `ocr`
+
+No está en `schema.sql`. Es la Edge Function `supabase/functions/ocr`: recibe la foto en base64, exige el JWT del usuario y llama a Grok 4.7. La clave `XAI_API_KEY` es un secreto del proyecto. Una página no se guarda en Postgres hasta que la persona pulsa **Guardar**.
 
 ## Límites del plan gratuito (referencia)
 
